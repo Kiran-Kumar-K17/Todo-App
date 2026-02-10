@@ -6,14 +6,32 @@ import {
   updateTodo,
   deleteTodo,
 } from "../controller/todo.js";
+import {
+  createTodoSchema,
+  updateTodoSchema,
+  idSchema,
+} from "../schemas/todoSchemas.js";
+import { validate } from "../middleware/validate.js";
+
 const router = Router();
 
-router.route("/").get(getTodos).post(createTodo);
+router
+  .route("/")
+  .get(getTodos)
+  .post(validate(createTodoSchema, "body"), createTodo);
 router
   .route("/:id")
-  .get(getTodosById)
-  .patch(updateTodo)
-  .delete(deleteTodo)
-  .put(updateTodo);
+  .get(validate(idSchema, "params"), getTodosById)
+  .patch(
+    validate(idSchema, "params"),
+    validate(updateTodoSchema, "body"),
+    updateTodo,
+  )
+  .delete(validate(idSchema, "params"), deleteTodo)
+  .put(
+    validate(idSchema, "params"),
+    validate(updateTodoSchema, "body"),
+    updateTodo,
+  );
 
 export default router;

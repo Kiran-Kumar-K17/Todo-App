@@ -1,19 +1,27 @@
+// model/DB.js
 import mongoose, { Schema } from "mongoose";
 
-const todoSchema = Schema({
-  name: {
-    type: String,
-    required: true,
+// SIMPLE Mongoose schema (no validation - Zod handles that)
+const todoSchema = new Schema(
+  {
+    name: {
+      type: String,
+      required: true, // Keep basic requirements if you want
+    },
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+    content: {
+      type: String,
+      required: true,
+    },
   },
-  date: {
-    type: Date,
-    default: Date.now,
+  {
+    timestamps: true, // Adds createdAt, updatedAt
+    versionKey: false, // Removes __v field
   },
-  content: {
-    type: String,
-    required: [true, "content is required"],
-    maxLength: [100, "100 is the Max Length"],
-  },
-});
+);
 
+// Export the model
 export const Todo = mongoose.model("Todo", todoSchema);
