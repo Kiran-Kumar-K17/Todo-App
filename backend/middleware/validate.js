@@ -9,17 +9,12 @@ import { z } from "zod";
 export const validate = (schema, target = "body") => {
   return (req, res, next) => {
     try {
-      // Validate the specified target (body, params, or query)
       const validatedData = schema.parse(req[target]);
-
-      // Replace the original data with validated data
       req[target] = validatedData;
-
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
-        // Format Zod errors nicely
-        const errors = error.errors.map((err) => ({
+        const errors = error.issues.map((err) => ({
           field: err.path.join("."),
           message: err.message,
         }));
@@ -30,7 +25,6 @@ export const validate = (schema, target = "body") => {
         });
       }
 
-      // Unexpected error
       return res.status(500).json({
         message: "Internal validation error",
       });

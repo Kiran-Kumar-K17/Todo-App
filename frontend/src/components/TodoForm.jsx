@@ -1,9 +1,19 @@
 // components/TodoForm.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const TodoForm = ({ onAdd }) => {
+const TodoForm = ({ onAdd, onUpdate, editingTodo, setEditingTodo }) => {
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
+
+  useEffect(() => {
+    if (editingTodo) {
+      setName(editingTodo.name);
+      setContent(editingTodo.content);
+    } else {
+      setName("");
+      setContent("");
+    }
+  }, [editingTodo]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -12,7 +22,15 @@ const TodoForm = ({ onAdd }) => {
     const trimmedContent = content.trim();
     if (!trimmedName || !trimmedContent) return;
 
-    onAdd({ name: trimmedName, content: trimmedContent });
+    if (editingTodo) {
+      onUpdate(editingTodo._id, {
+        name: trimmedName,
+        content: trimmedContent,
+      });
+      setEditingTodo(null);
+    } else {
+      onAdd({ name: trimmedName, content: trimmedContent });
+    }
 
     setName("");
     setContent("");
@@ -40,7 +58,7 @@ const TodoForm = ({ onAdd }) => {
         type="submit"
         className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
       >
-        Add Task
+        {editingTodo ? "Update Task" : "Add Task"}
       </button>
     </form>
   );

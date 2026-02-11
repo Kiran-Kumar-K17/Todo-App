@@ -8,6 +8,7 @@ const TodoPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
+  const [editingTodo, setEditingTodo] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -41,10 +42,21 @@ const TodoPage = () => {
 
   const handleDeleteTodo = async (id) => {
     try {
-      await axios.delete(`http://localhost:8000/todo/${id}`);
+      await axios.delete(`${API_URL}/todo/${id}`);
       setData(data.filter((todo) => todo._id !== id));
     } catch (err) {
       console.log(err);
+    }
+  };
+
+  const handleUpdateTodo = async (id, updatedTodo) => {
+    try {
+      const res = await axios.put(`${API_URL}/todo/${id}`, updatedTodo);
+      setData((prev) =>
+        prev.map((todo) => (todo._id === id ? res.data.data : todo)),
+      );
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -67,8 +79,17 @@ const TodoPage = () => {
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">My Todo List</h1>
       <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-6">
-        <TodoForm onAdd={handleAddTodo} />
-        <TodoList todos={data} onDelete={handleDeleteTodo} />
+        <TodoForm
+          onAdd={handleAddTodo}
+          onUpdate={handleUpdateTodo}
+          editingTodo={editingTodo}
+          setEditingTodo={setEditingTodo}
+        />
+        <TodoList
+          todos={data}
+          onDelete={handleDeleteTodo}
+          onEdit={setEditingTodo}
+        />
       </div>
     </div>
   );
