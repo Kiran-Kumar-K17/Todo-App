@@ -2,12 +2,17 @@ import express from "express";
 import connectDB from "./utils/MongoDB.js";
 import dotenv from "dotenv";
 import todoRouter from "./routes/todo.js";
+import cors from "cors";
 dotenv.config();
 
 const app = express();
 
 app.use(express.json());
-
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+  }),
+);
 const startServer = async () => {
   try {
     await connectDB();
