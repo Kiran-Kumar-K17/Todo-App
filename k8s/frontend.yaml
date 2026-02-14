@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: kirankumark17/todo-frontend:f071c9408aacaa226c4feaf4e7551c5b07dfae97
+          image: kirankumark17/todo-frontend:9956b7c05e918e11c3bbd10d70ad77a045bce275
           ports:
             - containerPort: 80
 ---
@@ -31,3 +31,6 @@ spec:
   ports:
     - port: 80
       targetPort: 80
+  template:
+    spec:
+      containers: []
