@@ -77,7 +77,9 @@ const TodoPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">My Todo List</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">
+        My Todo List Web-App
+      </h1>
       <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-6">
         <TodoForm
           onAdd={handleAddTodo}
