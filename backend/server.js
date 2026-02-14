@@ -5,18 +5,19 @@ import todoRouter from "./routes/todo.js";
 import cors from "cors";
 dotenv.config();
 
+const PORT = process.env.PORT || 8000;
 const app = express();
 
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "*",
   }),
 );
 const startServer = async () => {
   try {
     await connectDB();
-    console.log("Server is running on port 8000");
+    console.log(`Server is running on port ${PORT}`);
   } catch (error) {
     console.error("Failed to connect to DB:", error);
     process.exit(1);
@@ -31,6 +32,6 @@ app.get("/", (req, res) => {
 
 app.use("/todo", todoRouter);
 
-app.listen(8000, () => {
-  console.log("Server is Running");
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
