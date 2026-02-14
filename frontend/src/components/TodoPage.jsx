@@ -14,7 +14,7 @@ const TodoPage = () => {
     const controller = new AbortController();
     const fetchData = async () => {
       try {
-        const result = await axios.get(`${API_URL}/todo`, {
+        const result = await axios.get(`/api/todo`, {
           signal: controller.signal,
         });
         setData(result.data.data);
@@ -42,7 +42,7 @@ const TodoPage = () => {
 
   const handleDeleteTodo = async (id) => {
     try {
-      await axios.delete(`${API_URL}/todo/${id}`);
+      await axios.delete(`/api/todo/${id}`);
       setData(data.filter((todo) => todo._id !== id));
     } catch (err) {
       console.log(err);
@@ -51,7 +51,7 @@ const TodoPage = () => {
 
   const handleUpdateTodo = async (id, updatedTodo) => {
     try {
-      const res = await axios.put(`${API_URL}/todo/${id}`, updatedTodo);
+      const res = await axios.put(`/api/todo/${id}`, updatedTodo);
       setData((prev) =>
         prev.map((todo) => (todo._id === id ? res.data.data : todo)),
       );

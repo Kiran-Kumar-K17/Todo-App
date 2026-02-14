@@ -30,7 +30,7 @@ app.get("/", (req, res) => {
   res.send("Welcome to the Home Page");
 });
 
-app.use("/todo", todoRouter);
+app.use("/api/todo", todoRouter);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
