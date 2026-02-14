@@ -33,7 +33,7 @@ const TodoPage = () => {
 
   const handleAddTodo = async (newTodo) => {
     try {
-      const res = await axios.post(`${API_URL}/todo`, newTodo);
+      const res = await axios.post(`/api/todo`, newTodo);
       setData([...data, res.data.data]);
     } catch (err) {
       console.log(err);
