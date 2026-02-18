@@ -63,16 +63,26 @@ jobs:
     needs: trivy_fs_scan
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Verify backend files
+        run: |
+          echo "=== Backend directory contents ==="
+          ls -la backend/
+          echo "=== Dockerfile content ==="
+          cat backend/Dockerfile
+      
       - uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
       - uses: docker/setup-buildx-action@v3
+      
       - name: Build & Push Backend
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
+          context: backend
+          file: backend/Dockerfile
           push: true
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/todo-backend:${{ env.IMAGE_TAG }}
@@ -83,16 +93,26 @@ jobs:
     needs: trivy_fs_scan
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Verify frontend files
+        run: |
+          echo "=== Frontend directory contents ==="
+          ls -la frontend/
+          echo "=== Dockerfile content ==="
+          cat frontend/Dockerfile
+      
       - uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
       - uses: docker/setup-buildx-action@v3
+      
       - name: Build & Push Frontend
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
+          context: frontend
+          file: frontend/Dockerfile
           push: true
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:${{ env.IMAGE_TAG }}
@@ -112,6 +132,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           format: table
+      
       - name: Scan Frontend Image
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -136,33 +157,26 @@ jobs:
       
       - name: Update Backend Image in Deployment only
         run: |
-          # This ONLY updates the Deployment section, ignores Service
-          yq -i '
-            select(.kind == "Deployment").spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-backend:${{ env.IMAGE_TAG }}"
-          ' k8s/backend.yaml
+          yq -i 'select(.kind == "Deployment").spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-backend:${{ env.IMAGE_TAG }}"' k8s/backend.yaml
       
       - name: Update Frontend Image in Deployment only
         run: |
-          # This ONLY updates the Deployment section, ignores Service
-          yq -i '
-            select(.kind == "Deployment").spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:${{ env.IMAGE_TAG }}"
-          ' k8s/frontend.yaml
+          yq -i 'select(.kind == "Deployment").spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:${{ env.IMAGE_TAG }}"' k8s/frontend.yaml
       
       - name: Clean up any potential corruption in Service sections
         run: |
-          # Remove any template sections that might have been accidentally added to Services
           yq -i 'del(select(.kind == "Service").spec.template)' k8s/backend.yaml
           yq -i 'del(select(.kind == "Service").spec.template)' k8s/frontend.yaml
       
-      - name: Validate YAML files are correct
+      - name: Validate YAML files
         run: |
-          echo "=== Backend.yaml (Deployment section) ==="
+          echo "=== Backend.yaml (Deployment) ==="
           yq 'select(.kind == "Deployment")' k8s/backend.yaml
-          echo "=== Backend.yaml (Service section) ==="
+          echo "=== Backend.yaml (Service) ==="
           yq 'select(.kind == "Service")' k8s/backend.yaml
-          echo "=== Frontend.yaml (Deployment section) ==="
+          echo "=== Frontend.yaml (Deployment) ==="
           yq 'select(.kind == "Deployment")' k8s/frontend.yaml
-          echo "=== Frontend.yaml (Service section) ==="
+          echo "=== Frontend.yaml (Service) ==="
           yq 'select(.kind == "Service")' k8s/frontend.yaml
       
       - name: Commit and Push Changes
