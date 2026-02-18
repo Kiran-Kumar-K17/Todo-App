@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: kirankumark17/todo-backend:66637695b87e4cb17143a38da15670522a23a305
+          image: kirankumark17/todo-backend:cf2a08077b944c2b49484995280f5a23aed84ba0
           ports:
             - containerPort: 8000
           env:
