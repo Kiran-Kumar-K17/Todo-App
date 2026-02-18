@@ -35,7 +35,4 @@ spec:
     - protocol: TCP
       port: 8000
       targetPort: 8000
-  template:
-    spec:
-      containers:
-        - image: kirankumark17/todo-backend:66637695b87e4cb17143a38da15670522a23a305
+ 
