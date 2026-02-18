@@ -1,0 +1,200 @@
+name: Todo App DevSecOps CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - Devops
+
+permissions:
+  contents: write
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Backend Syntax Check
+        run: |
+          cd backend
+          find . -name "*.js" -exec node --check {} +
+      - name: Frontend Syntax Check
+        run: |
+          cd frontend
+          find . -name "*.js" -exec node --check {} +
+  
+  gitleaks_scan:
+    runs-on: ubuntu-latest
+    needs: compile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          fail: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  trivy_fs_scan:
+    runs-on: ubuntu-latest
+    needs: gitleaks_scan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+  build_backend:
+    runs-on: ubuntu-latest
+    needs: trivy_fs_scan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/todo-backend:${{ env.IMAGE_TAG }}
+            ${{ vars.DOCKERHUB_USERNAME }}/todo-backend:latest
+  
+  build_frontend:
+    runs-on: ubuntu-latest
+    needs: trivy_fs_scan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:${{ env.IMAGE_TAG }}
+            ${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:latest
+  
+  trivy_image_scan:
+    runs-on: ubuntu-latest
+    needs:
+      - build_backend
+      - build_frontend
+    steps:
+      - name: Scan Backend Image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ vars.DOCKERHUB_USERNAME }}/todo-backend:${{ env.IMAGE_TAG }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+      - name: Scan Frontend Image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:${{ env.IMAGE_TAG }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+
+  update_k8s_manifests:
+    runs-on: ubuntu-latest
+    needs: trivy_image_scan
+    if: github.ref == 'refs/heads/Devops'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Setup yq
+        uses: mikefarah/yq@v4
+      
+      - name: Update Backend Image in Deployment only
+        run: |
+          # This ONLY updates the Deployment section, ignores Service
+          yq -i '
+            select(.kind == "Deployment").spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-backend:${{ env.IMAGE_TAG }}"
+          ' k8s/backend.yaml
+      
+      - name: Update Frontend Image in Deployment only
+        run: |
+          # This ONLY updates the Deployment section, ignores Service
+          yq -i '
+            select(.kind == "Deployment").spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:${{ env.IMAGE_TAG }}"
+          ' k8s/frontend.yaml
+      
+      - name: Clean up any potential corruption in Service sections
+        run: |
+          # Remove any template sections that might have been accidentally added to Services
+          yq -i 'del(select(.kind == "Service").spec.template)' k8s/backend.yaml
+          yq -i 'del(select(.kind == "Service").spec.template)' k8s/frontend.yaml
+      
+      - name: Validate YAML files are correct
+        run: |
+          echo "=== Backend.yaml (Deployment section) ==="
+          yq 'select(.kind == "Deployment")' k8s/backend.yaml
+          echo "=== Backend.yaml (Service section) ==="
+          yq 'select(.kind == "Service")' k8s/backend.yaml
+          echo "=== Frontend.yaml (Deployment section) ==="
+          yq 'select(.kind == "Deployment")' k8s/frontend.yaml
+          echo "=== Frontend.yaml (Service section) ==="
+          yq 'select(.kind == "Service")' k8s/frontend.yaml
+      
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add k8s/
+          
+          if ! git diff --staged --quiet; then
+            git commit -m "Update Kubernetes manifests to image tag ${{ env.IMAGE_TAG }}"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push
+          else
+            echo "No changes to commit"
+          fi
+  
+  notify:
+    runs-on: ubuntu-latest
+    needs:
+      - compile
+      - gitleaks_scan
+      - trivy_fs_scan
+      - build_backend
+      - build_frontend
+      - trivy_image_scan
+      - update_k8s_manifests
+    if: always()
+    steps:
+      - name: Slack Notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
