@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 env:
-  IMAGE_TAG: ${{ github.sa }}
+  IMAGE_TAG: ${{ github.sha }}  # Fixed: changed from 'sa' to 'sha'
 
 jobs:
   compile:
