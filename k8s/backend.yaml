@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: kirankumark17/todo-backend:latest
+          image: kirankumark17/todo-backend:9650bcfce9fcd413cf811a0d3b1a8b69acc984e0
           ports:
             - containerPort: 8000
           env:
@@ -35,3 +35,6 @@ spec:
     - protocol: TCP
       port: 8000
       targetPort: 8000
+  template:
+    spec:
+      containers: []
