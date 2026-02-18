@@ -134,13 +134,19 @@ jobs:
       - name: Setup yq
         uses: mikefarah/yq@v4
       
-      - name: Update Backend Image
+      - name: Update Backend Image in Deployment
         run: |
-          yq -i '.spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-backend:${{ env.IMAGE_TAG }}"' k8s/backend.yaml
+          # Only update the Deployment section, not the Service
+          yq -i '
+            select(.kind == "Deployment").spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-backend:${{ env.IMAGE_TAG }}"
+          ' k8s/backend.yaml
       
-      - name: Update Frontend Image
+      - name: Update Frontend Image in Deployment
         run: |
-          yq -i '.spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:${{ env.IMAGE_TAG }}"' k8s/frontend.yaml
+          # Only update the Deployment section, not the Service
+          yq -i '
+            select(.kind == "Deployment").spec.template.spec.containers[0].image = "${{ vars.DOCKERHUB_USERNAME }}/todo-frontend:${{ env.IMAGE_TAG }}"
+          ' k8s/frontend.yaml
       
       - name: Validate YAML files
         run: |
@@ -148,8 +154,6 @@ jobs:
           cat k8s/backend.yaml
           echo "=== Frontend.yaml ==="
           cat k8s/frontend.yaml
-          echo "=== Ingress.yaml ==="
-          cat k8s/ingress.yaml
       
       - name: Commit and Push Changes
         run: |
