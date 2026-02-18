@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: backend
@@ -14,28 +14,24 @@ spec:
     spec:
       containers:
         - name: backend
-          image: kirankumark17/todo-backend:9956b7c05e918e11c3bbd10d70ad77a045bce275
+          image: kirankumark17/todo-backend:latest
           ports:
             - containerPort: 8000
           env:
             - name: MONGO_URI
-              value: mongodb://mongodb-service:27017/tododb
-            - name: FRONTEND_URL
-              value: "*"
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets # The name of the secret we created in Step 1
+                  key: MONGO_URI # The key inside that secret
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: backend-service
-  annotations:
-    argocd.argoproj.io/compare-options: IgnoreExtraneous
 spec:
   selector:
     app: backend
   ports:
-    - port: 8000
+    - protocol: TCP
+      port: 8000
       targetPort: 8000
-  type: ClusterIP
-  template:
-    spec:
-      containers: []
