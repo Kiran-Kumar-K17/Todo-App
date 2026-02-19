@@ -15,23 +15,32 @@ import { validate } from "../middleware/validate.js";
 
 const router = Router();
 
-router
-  .route("/")
-  .get(getTodos)
-  .post(validate(createTodoSchema, "body"), createTodo);
-router
-  .route("/:id")
-  .get(validate(idSchema, "params"), getTodosById)
-  .patch(
-    validate(idSchema, "params"),
-    validate(updateTodoSchema, "body"),
-    updateTodo,
-  )
-  .delete(validate(idSchema, "params"), deleteTodo)
-  .put(
-    validate(idSchema, "params"),
-    validate(updateTodoSchema, "body"),
-    updateTodo,
-  );
+// Get all todos - MUST come before /:id routes
+router.get("/", getTodos);
+
+// Create a new todo
+router.post("/", validate(createTodoSchema, "body"), createTodo);
+
+// Get todo by ID
+router.get("/:id", validate(idSchema, "params"), getTodosById);
+
+// Update todo (PUT)
+router.put(
+  "/:id",
+  validate(idSchema, "params"),
+  validate(updateTodoSchema, "body"),
+  updateTodo,
+);
+
+// Update todo (PATCH)
+router.patch(
+  "/:id",
+  validate(idSchema, "params"),
+  validate(updateTodoSchema, "body"),
+  updateTodo,
+);
+
+// Delete todo
+router.delete("/:id", validate(idSchema, "params"), deleteTodo);
 
 export default router;

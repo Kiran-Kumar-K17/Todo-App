@@ -13,7 +13,7 @@ const TodoPage = () => {
     const controller = new AbortController();
     const fetchData = async () => {
       try {
-        const result = await axios.get(`/api/todo`, {
+        const result = await axios.get(`api/todo`, {
           signal: controller.signal,
         });
         setData(result.data.data);
